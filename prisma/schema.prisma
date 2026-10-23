@@ -1,0 +1,65 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  posts     Post[]
+  users     User[]
+}
+
+model User {
+  id          String    @id @default(cuid())
+  email       String
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  posts       Post[]
+  votes       Vote[]
+
+  @@unique([workspaceId, email])
+}
+
+model Post {
+  id          String     @id @default(cuid())
+  title       String
+  content     String
+  status      PostStatus @default(OPEN)
+  workspaceId String
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User       @relation(fields: [authorId], references: [id])
+  voteCount   Int        @default(0)
+  votes       Vote[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId]) // Prevents double-voting
+}
+
+enum PostStatus {
+  OPEN
+  UNDER_REVIEW
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CLOSED
+}
